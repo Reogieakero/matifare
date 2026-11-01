@@ -1,56 +1,105 @@
-# Welcome to your Expo app 👋
+# Tripede
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Tripede is a fare estimator for tricycle rides: know the price before you hop in.
+Built with Expo and React Native, and shipped to iOS, Android and the web from a
+single codebase.
 
-## Get started
+## Highlights
 
-1. Install dependencies
+- **Cinematic launch splash** — animated mascot, wordmark and loading state.
+- **Three-step onboarding** — upfront pricing, comparison and offline confidence,
+  remembered on-device so it only appears once.
+- **Fare dashboard** — quick distance chips, bike/car/XL comparison, live estimate
+  and an empty state ready for saved trips.
+- **Offline live map** — a real street map of Mati City bundled inside the app,
+  with a live GPS pin. No tile server, API key or internet connection is used.
+- **Blue, yellow and white palette** — crisp white surfaces, electric-blue actions
+  and mascot-yellow accents pulled straight from the Tripede tricycle.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Then open the app in Expo Go, an emulator/simulator, or the browser.
 
-### Other setup steps
+```bash
+npx expo start --web     # web
+npx expo lint            # lint
+npx tsc --noEmit         # typecheck
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Project structure
 
-## Learn more
+```text
+src/
+  app/                  Expo Router routes
+    index.tsx           Animated launch splash
+    onboarding.tsx      Three-slide welcome flow
+    map.tsx             Full-screen offline map
+    home.tsx            Fare estimator dashboard
+  components/
+    brand-logo.tsx      Mascot + wordmark lockup
+    offline-map-card.tsx  Offline "You are here" map + live GPS pin
+    map/
+      offline-map-canvas.tsx  Shared map renderer + gestures
+    onboarding/         Slide illustrations
+    ui/                 AppText, AppButton, Icon, AmbientBackground
+  constants/
+    app.ts              Brand config, vehicles, fares, storage keys
+    theme.ts            Colors, gradients, spacing, radii, shadows
+  hooks/
+    use-user-location.ts  Foreground GPS + permission states
+  lib/
+    offline-map.ts      Local projection + SVG path helpers
+    onboarding.ts       First-run persistence
+    storage.ts          expo-sqlite/kv-store (native)
+    storage.web.ts      localStorage (web)
+assets/
+  maps/mati-map.json    Bundled OSM extract rendered offline
+scripts/
+  build-offline-map.py  Rebuilds the bundled Mati City map data
+  generate-brand-assets.ps1   Regenerates icons from the mascot
+  brand-mascot-panel.ps1      Repaints the mascot sidecar label
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Brand assets
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `assets/images/mascot.png` — transparent Tripede mascot used in the app.
+- `assets/images/icon.png`, `brand-mark.png`, `favicon.png`,
+  `android-icon-*.png` — generated from the mascot.
+- The original artwork is kept untouched at
+  `assets/images/Fare Calculator Tricycle Mascot.png`.
 
-## Join the community
+To regenerate the icon set after replacing `mascot.png`:
 
-Join our community of developers creating universal apps.
+```powershell
+pwsh ./scripts/generate-brand-assets.ps1
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Fares
+
+Vehicle base fares and per-kilometre rates live in `src/constants/app.ts`.
+Estimates are indicative and exclude tolls and waiting time.
+
+## Offline map
+
+The home screen asks for foreground location permission and places your GPS
+position on a map of Mati City. Tap the expand button on the map card to open
+the full-screen map, which keeps the same offline data and live pin. Map data is
+shipped in `assets/maps/mati-map.json`
+and rendered with `react-native-svg`, so there are no tile requests and no API
+keys. Airplane mode does not affect the map or the GPS fix.
+
+Map data © OpenStreetMap contributors, available under the ODbL. Regenerate the
+bundle after changing the coverage area:
+
+```bash
+python scripts/build-offline-map.py
+```
+
+Location permission text is configured through the `expo-location` plugin in
+`app.json`. Because the plugin touches native configuration, permission strings
+on iOS only take effect in a development/production build, not Expo Go.

@@ -1,18 +1,53 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
+import Constants from 'expo-constants';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { Colors } from '@/constants/theme';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // The splash screen can already be hidden during fast refresh.
+});
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+// setOptions is not supported in Expo Go and only logs a warning there.
+if (Constants.expoGoConfig == null) {
+  SplashScreen.setOptions({
+    duration: 350,
+    fade: true,
+  });
+}
+
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: Colors.light.background },
+            animation: 'fade',
+            animationDuration: 280,
+          }}>
+          <Stack.Screen name="index" options={{ animation: 'none' }} />
+          <Stack.Screen name="onboarding" options={{ animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen
+            name="map"
+            options={{
+              animation: 'slide_from_bottom',
+              animationDuration: 320,
+              contentStyle: { backgroundColor: Colors.light.background },
+            }}
+          />
+        </Stack>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+export const unstable_settings = {
+  anchor: 'index',
+};

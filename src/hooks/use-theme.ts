@@ -1,14 +1,14 @@
+import { Colors, type Theme } from '@/constants/theme';
+
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * Tripede ships a single blue / yellow / white palette. White surfaces with
+ * electric blue actions and mascot-yellow accents, so every screen — from the
+ * splash to the fare dashboard — shares the same look.
  */
+export function useTheme(): Theme {
+  return Colors.light;
+}
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'dark' ? 'dark' : 'light';
-
-  return Colors[theme];
+export function useColorMode() {
+  return 'light' as const;
 }

@@ -1,18 +1,19 @@
 {
   "expo": {
-    "name": "FareCalc",
-    "slug": "FareCalc",
+    "name": "Tripede",
+    "slug": "tripede",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "farecalc",
-    "userInterfaceStyle": "automatic",
+    "scheme": "tripede",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,9 +29,21 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/brand-mark.png",
+          "imageWidth": 116,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#FFFFFF",
+            "image": "./assets/images/brand-mark.png"
+          }
+        }
+      ],
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tripede uses your location to show where you are on the offline map."
         }
       ]
     ],
