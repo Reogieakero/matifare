@@ -35,7 +35,14 @@ export type IconName =
   | 'locate'
   | 'expand'
   | 'collapse'
-  | 'refresh';
+  | 'refresh'
+  | 'settings'
+  | 'sun'
+  | 'moon'
+  | 'device'
+  | 'database'
+  | 'trash'
+  | 'log-out';
 
 type IconDefinition = {
   ios: SFSymbol;
@@ -86,6 +93,17 @@ const icons: Record<IconName, IconDefinition> = {
     web: 'close_fullscreen',
   },
   refresh: { ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' },
+  settings: { ios: 'gearshape.fill', android: 'settings', web: 'settings' },
+  sun: { ios: 'sun.max.fill', android: 'light_mode', web: 'light_mode' },
+  moon: { ios: 'moon.fill', android: 'dark_mode', web: 'dark_mode' },
+  device: { ios: 'iphone', android: 'smartphone', web: 'smartphone' },
+  database: { ios: 'externaldrive.fill', android: 'storage', web: 'storage' },
+  trash: { ios: 'trash.fill', android: 'delete', web: 'delete' },
+  'log-out': {
+    ios: 'rectangle.portrait.and.arrow.right',
+    android: 'logout',
+    web: 'logout',
+  },
 };
 
 type IconProps = {

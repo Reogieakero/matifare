@@ -62,10 +62,14 @@ export function useTripOdometer(location: UserLocation | null): TripOdometer {
 
     // A stationary phone still reports fixes that wander several metres. The
     // device's own speed reading is the reliable way to tell drift from travel.
-    const standingStill =
-      location.speed !== null &&
-      location.speed >= 0 &&
-      location.speed < MIN_MOVING_SPEED_MPS;
+    //
+    // Android reports speed as 0 when the GPS fix does not carry a speed value
+    // at all, which is common on cheaper phones. Treat 0 (and negative / null)
+    // as "unknown" instead of "standing still", otherwise the meter never
+    // leaves 0.00 KM even while the rider is moving.
+    const speed = location.speed;
+    const hasSpeedReading = speed !== null && speed > 0;
+    const standingStill = hasSpeedReading && speed < MIN_MOVING_SPEED_MPS;
 
     if (standingStill) {
       // Re-anchor at the current fix so the next real movement is measured

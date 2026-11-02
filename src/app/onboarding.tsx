@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -38,28 +38,28 @@ type Slide = {
 
 const slides: Slide[] = [
   {
-    key: 'upfront',
-    eyebrow: '01 · UPFRONT PRICING',
+    key: 'fare',
+    eyebrow: '01 · TRICYCLE FARE',
     title: 'Know your fare before you ride.',
     description:
-      'Get a clear, itemised estimate before you hop in. What you see is what you pay — no surprises when you arrive.',
-    art: 'mascot',
+      'Pick your fuel tier and see the exact tricycle fare — base fare, added kilometres, and the 20% senior, PWD or student discount. No haggling.',
+    art: 'fare',
   },
   {
-    key: 'compare',
-    eyebrow: '02 · SMARTER CHOICES',
-    title: 'Compare every option in seconds.',
+    key: 'map',
+    eyebrow: '02 · GPS COMMUTE METER',
+    title: 'Your route, even without signal.',
     description:
-      'Bike, car or XL — see the fare and pickup time side by side, then choose the ride that fits your day.',
-    art: 'compare',
+      'The offline map tracks your commute with GPS and meters the distance and fare as you ride. No mobile data needed, nothing leaves your phone.',
+    art: 'map',
   },
   {
-    key: 'confidence',
-    eyebrow: '03 · BUILT FOR REAL LIFE',
-    title: 'Ride with confidence, every time.',
+    key: 'features',
+    eyebrow: '03 · BUILT FOR EVERY RIDE',
+    title: 'Every trip, remembered.',
     description:
-      'Estimates that work offline, saved trips for quick repeats, and transparent pricing you can trust.',
-    art: 'confidence',
+      'Saved commutes, daily fares, discount savings and streaks — all stored on your device and ready whenever you need them.',
+    art: 'features',
   },
 ];
 
@@ -105,6 +105,8 @@ function SlidePage({ slide, width, height, stageHeight, active }: SlidePageProps
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
+  const isReplay = params.from === 'me';
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(0);
   const [finishing, setFinishing] = useState(false);
@@ -131,7 +133,14 @@ export default function OnboardingScreen() {
     if (finishing) return;
     setFinishing(true);
     await completeOnboarding();
-    router.replace('/home');
+
+    // Replayed from Me: return to where the rider came from instead of
+    // throwing them onto Home.
+    if (isReplay && router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
   };
 
   const handlePrimaryPress = () => {
@@ -151,12 +160,12 @@ export default function OnboardingScreen() {
           <BrandLogo size={26} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Skip onboarding"
+            accessibilityLabel={isReplay ? 'Close onboarding' : 'Skip onboarding'}
             onPress={finish}
             hitSlop={12}
             style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
             <AppText variant="bodySmall" tone="muted">
-              Skip
+              {isReplay ? 'Close' : 'Skip'}
             </AppText>
             <Icon name="arrow-up-right" size={14} color="rgba(122,136,158,0.9)" />
           </Pressable>
@@ -227,7 +236,7 @@ export default function OnboardingScreen() {
           </View>
 
           <AppButton
-            label={isLast ? 'Get started' : 'Continue'}
+            label={isLast ? (isReplay ? 'Done' : 'Get started') : 'Continue'}
             onPress={handlePrimaryPress}
             icon="arrow-right"
             loading={finishing}

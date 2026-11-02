@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { OfflineMapCanvas } from '@/components/map/offline-map-canvas';
@@ -7,24 +7,28 @@ import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
 import { Radii, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useUserLocation } from '@/hooks/use-user-location';
+import { useTripLocation } from '@/hooks/use-trip-session';
 import { OfflineMap, formatCoordinate } from '@/lib/offline-map';
 
 const MAP_HEIGHT = 194;
 
 export function OfflineMapCard() {
   const theme = useTheme();
-  const [focused, setFocused] = useState(true);
+  const {
+    acquireLocation,
+    location,
+    locationStatus: status,
+    canAskAgain,
+    locationError: error,
+    refreshLocation: refresh,
+    openLocationSettings: openSettings,
+  } = useTripLocation();
 
   useFocusEffect(
     useCallback(() => {
-      setFocused(true);
-      return () => setFocused(false);
-    }, []),
+      return acquireLocation();
+    }, [acquireLocation]),
   );
-
-  const { status, location, canAskAgain, error, refresh, openSettings } =
-    useUserLocation(focused);
 
   const hasFix = Boolean(location);
 

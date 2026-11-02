@@ -1,6 +1,6 @@
 import { StorageKeys } from '@/constants/app';
 import type { TrackPoint } from '@/lib/offline-map';
-import { getStoredValue, setStoredValue } from '@/lib/storage';
+import { getStoredValue, removeStoredValue, setStoredValue } from '@/lib/storage';
 
 /** A finished commute the rider chose to keep on this device. */
 export type SavedTrip = {
@@ -84,4 +84,41 @@ export async function appendSavedTrip(trip: Omit<SavedTrip, 'id'>): Promise<Save
   );
 
   return record;
+}
+
+/** UTF-8 byte size of the saved-trip payload, used by the storage summary. */
+function byteLength(value: string) {
+  let bytes = 0;
+
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    bytes += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+  }
+
+  return bytes;
+}
+
+export type SavedTripsSummary = {
+  count: number;
+  bytes: number;
+};
+
+/** How much trip history is sitting in local storage right now. */
+export async function getSavedTripsSummary(): Promise<SavedTripsSummary> {
+  const raw = await getStoredValue(StorageKeys.savedTrips);
+  if (!raw) return { count: 0, bytes: 0 };
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return {
+      count: Array.isArray(parsed) ? parsed.length : 0,
+      bytes: byteLength(raw),
+    };
+  } catch {
+    return { count: 0, bytes: byteLength(raw) };
+  }
+}
+
+export async function clearSavedTrips(): Promise<void> {
+  await removeStoredValue(StorageKeys.savedTrips);
 }

@@ -16,6 +16,7 @@ import Svg, { Circle, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
 import { Radii, Shadows, Spacing } from '@/constants/theme';
+import { useMapPalette } from '@/hooks/use-map-preference';
 import { useTheme } from '@/hooks/use-theme';
 import type { LocationStatus, UserLocation } from '@/hooks/use-user-location';
 import {
@@ -109,6 +110,11 @@ export type OfflineMapCanvasProps = {
   showAttribution?: boolean;
   /** Hide the locate button when the map is showing a recorded route instead of a live fix. */
   showLocate?: boolean;
+  /**
+   * When false the canvas behaves like a still image: no panning, pinching or
+   * zoom controls. Used by route snapshots, where the route must not move.
+   */
+  interactive?: boolean;
   rounded?: boolean;
   locateLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -165,11 +171,13 @@ export function OfflineMapCanvas({
   showChip = true,
   showAttribution = true,
   showLocate = true,
+  interactive = true,
   rounded = true,
   locateLabel,
   style,
 }: OfflineMapCanvasProps) {
   const theme = useTheme();
+  const palette = useMapPalette();
   const [width, setWidth] = useState(0);
   const [manualCenter, setManualCenter] = useState<MapPoint>(
     () => initialCenter ?? projectPoint(OfflineMap.center.lat, OfflineMap.center.lng),
@@ -520,11 +528,11 @@ export function OfflineMapCanvas({
       onLayout={handleLayout}
       style={[
         styles.map,
-        { height, backgroundColor: '#EAF0E3' },
+        { height, backgroundColor: palette.background },
         rounded && { borderRadius: Radii.lg },
         style,
       ]}
-      {...panResponder.panHandlers}>
+      {...(interactive ? panResponder.panHandlers : {})}>
       {width > 0 ? (
         <Svg width={width} height={height} viewBox={viewBox} pointerEvents="none">
           <Rect
@@ -532,19 +540,19 @@ export function OfflineMapCanvas({
             y={center.y - height / scale / 2}
             width={width / scale}
             height={height / scale}
-            fill="#EEF2E7"
+            fill={palette.land}
           />
 
-          {paths.waterAreas ? <Path d={paths.waterAreas} fill="#B9DDF4" /> : null}
-          {paths.green ? <Path d={paths.green} fill="#D4EBCB" /> : null}
+          {paths.waterAreas ? <Path d={paths.waterAreas} fill={palette.water} /> : null}
+          {paths.green ? <Path d={paths.green} fill={palette.green} /> : null}
 
-          {buildingPath ? <Path d={buildingPath} fill="#E2E7EE" /> : null}
+          {buildingPath ? <Path d={buildingPath} fill={palette.building} /> : null}
 
           {span < 700 && paths.roads.paths ? (
             <Path
               d={paths.roads.paths}
               fill="none"
-              stroke="#D8DFE8"
+              stroke={palette.path}
               strokeWidth={roadStroke(1)}
               strokeDasharray={`${roadStroke(3)} ${roadStroke(3)}`}
             />
@@ -554,7 +562,7 @@ export function OfflineMapCanvas({
             <Path
               d={paths.roads.service}
               fill="none"
-              stroke="#E8EDF3"
+              stroke={palette.service}
               strokeWidth={roadStroke(2.4)}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -566,7 +574,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.minor}
                 fill="none"
-                stroke="#DCE3EB"
+                stroke={palette.minorCasing}
                 strokeWidth={roadStroke(3.6)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -574,7 +582,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.minor}
                 fill="none"
-                stroke="#FFFFFF"
+                stroke={palette.minorFill}
                 strokeWidth={roadStroke(2.2)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -587,7 +595,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.tertiary}
                 fill="none"
-                stroke="#D3DCE7"
+                stroke={palette.tertiaryCasing}
                 strokeWidth={roadStroke(5)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -595,7 +603,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.tertiary}
                 fill="none"
-                stroke="#FFFFFF"
+                stroke={palette.tertiaryFill}
                 strokeWidth={roadStroke(3.4)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -608,7 +616,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.secondary}
                 fill="none"
-                stroke="#E9D9BA"
+                stroke={palette.secondaryCasing}
                 strokeWidth={roadStroke(6.5)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -616,7 +624,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.secondary}
                 fill="none"
-                stroke="#FBE4B4"
+                stroke={palette.secondaryFill}
                 strokeWidth={roadStroke(4.4)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -629,7 +637,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.major}
                 fill="none"
-                stroke="#E7B96F"
+                stroke={palette.majorCasing}
                 strokeWidth={roadStroke(8)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -637,7 +645,7 @@ export function OfflineMapCanvas({
               <Path
                 d={paths.roads.major}
                 fill="none"
-                stroke="#F8CB7C"
+                stroke={palette.majorFill}
                 strokeWidth={roadStroke(5.6)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -649,7 +657,7 @@ export function OfflineMapCanvas({
             <Path
               d={paths.coast}
               fill="none"
-              stroke="#9ACDE9"
+              stroke={palette.coast}
               strokeWidth={roadStroke(1.8)}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -660,7 +668,7 @@ export function OfflineMapCanvas({
             <Path
               d={paths.waterLines}
               fill="none"
-              stroke="#A4D3EE"
+              stroke={palette.waterLine}
               strokeWidth={roadStroke(1.6)}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -672,7 +680,7 @@ export function OfflineMapCanvas({
               <Path
                 d={trackPath}
                 fill="none"
-                stroke="rgba(255,255,255,0.9)"
+                stroke={palette.trackHalo}
                 strokeWidth={roadStroke(7)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -680,7 +688,7 @@ export function OfflineMapCanvas({
               <Path
                 d={trackPath}
                 fill="none"
-                stroke={theme.primary}
+                stroke={palette.track}
                 strokeWidth={roadStroke(4)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -696,8 +704,8 @@ export function OfflineMapCanvas({
                 y={label.y}
                 fontSize={label.size}
                 fontWeight={label.weight}
-                fill="#FFFFFF"
-                stroke="#FFFFFF"
+                fill={palette.labelHalo}
+                stroke={palette.labelHalo}
                 strokeWidth={mins(3)}
                 textAnchor="middle"
                 opacity={0.94}>
@@ -708,7 +716,7 @@ export function OfflineMapCanvas({
                 y={label.y}
                 fontSize={label.size}
                 fontWeight={label.weight}
-                fill="#36465F"
+                fill={palette.labelText}
                 textAnchor="middle">
                 {label.name}
               </SvgText>
@@ -721,11 +729,11 @@ export function OfflineMapCanvas({
                 cx={trackStart.x}
                 cy={trackStart.y}
                 r={mins(7)}
-                fill="#FFFFFF"
-                stroke={theme.primary}
+                fill={palette.markerFill}
+                stroke={palette.track}
                 strokeWidth={roadStroke(2)}
               />
-              <Circle cx={trackStart.x} cy={trackStart.y} r={mins(3)} fill={theme.primary} />
+              <Circle cx={trackStart.x} cy={trackStart.y} r={mins(3)} fill={palette.track} />
             </>
           ) : null}
 
@@ -736,8 +744,8 @@ export function OfflineMapCanvas({
                   cx={marker.x}
                   cy={marker.y}
                   r={Math.max(Math.min(location.accuracy, 250), mins(10))}
-                  fill="rgba(37,99,235,0.12)"
-                  stroke="rgba(37,99,235,0.24)"
+                  fill={palette.accuracyFill}
+                  stroke={palette.accuracyStroke}
                   strokeWidth={roadStroke(1)}
                 />
               ) : null}
@@ -745,11 +753,11 @@ export function OfflineMapCanvas({
                 cx={marker.x}
                 cy={marker.y}
                 r={mins(9)}
-                fill="#FFFFFF"
-                stroke="rgba(15,23,42,0.16)"
+                fill={palette.markerFill}
+                stroke={palette.markerStroke}
                 strokeWidth={roadStroke(1)}
               />
-              <Circle cx={marker.x} cy={marker.y} r={mins(5.5)} fill={theme.primary} />
+              <Circle cx={marker.x} cy={marker.y} r={mins(5.5)} fill={palette.markerDot} />
             </>
           ) : null}
         </Svg>
@@ -766,60 +774,62 @@ export function OfflineMapCanvas({
         </View>
       ) : null}
 
-      <View style={[styles.mapControls, { bottom: Spacing.sm + bottomInset }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Zoom in"
-          onPress={() => zoomBy(1 / 1.7)}
-          style={({ pressed }) => [
-            styles.mapButton,
-            { backgroundColor: 'rgba(255,255,255,0.94)' },
-            pressed && styles.pressed,
-          ]}>
-          <Icon name="plus" size={15} color={theme.text} weight="semibold" />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Zoom out"
-          onPress={() => zoomBy(1.7)}
-          style={({ pressed }) => [
-            styles.mapButton,
-            { backgroundColor: 'rgba(255,255,255,0.94)' },
-            pressed && styles.pressed,
-          ]}>
-          <Icon name="minus" size={15} color={theme.text} weight="semibold" />
-        </Pressable>
-        {showLocate ? (
+      {interactive ? (
+        <View style={[styles.mapControls, { bottom: Spacing.sm + bottomInset }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={locateLabel ?? 'Center the map on my location'}
-            accessibilityHint="Moves the map back to your current GPS position"
-            onPress={recenter}
+            accessibilityLabel="Zoom in"
+            onPress={() => zoomBy(1 / 1.7)}
             style={({ pressed }) => [
-              locateLabel ? styles.locatePill : styles.mapButton,
-              locateLabel ? styles.locatePillSpacing : styles.recenterButton,
-              { backgroundColor: follow ? theme.primary : 'rgba(255,255,255,0.94)' },
+              styles.mapButton,
+              { backgroundColor: 'rgba(255,255,255,0.94)' },
               pressed && styles.pressed,
             ]}>
-            <Icon
-              name="locate"
-              size={locateLabel ? 14 : 16}
-              color={follow ? '#FFFFFF' : theme.primary}
-              weight="semibold"
-            />
-            {locateLabel ? (
-              <AppText
-                variant="caption"
-                style={[
-                  styles.locatePillText,
-                  { color: follow ? '#FFFFFF' : theme.primary },
-                ]}>
-                {locateLabel.toUpperCase()}
-              </AppText>
-            ) : null}
+            <Icon name="plus" size={15} color={theme.text} weight="semibold" />
           </Pressable>
-        ) : null}
-      </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Zoom out"
+            onPress={() => zoomBy(1.7)}
+            style={({ pressed }) => [
+              styles.mapButton,
+              { backgroundColor: 'rgba(255,255,255,0.94)' },
+              pressed && styles.pressed,
+            ]}>
+            <Icon name="minus" size={15} color={theme.text} weight="semibold" />
+          </Pressable>
+          {showLocate ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={locateLabel ?? 'Center the map on my location'}
+              accessibilityHint="Moves the map back to your current GPS position"
+              onPress={recenter}
+              style={({ pressed }) => [
+                locateLabel ? styles.locatePill : styles.mapButton,
+                locateLabel ? styles.locatePillSpacing : styles.recenterButton,
+                { backgroundColor: follow ? theme.primary : 'rgba(255,255,255,0.94)' },
+                pressed && styles.pressed,
+              ]}>
+              <Icon
+                name="locate"
+                size={locateLabel ? 14 : 16}
+                color={follow ? '#FFFFFF' : theme.primary}
+                weight="semibold"
+              />
+              {locateLabel ? (
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.locatePillText,
+                    { color: follow ? '#FFFFFF' : theme.primary },
+                  ]}>
+                  {locateLabel.toUpperCase()}
+                </AppText>
+              ) : null}
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {showAttribution ? (
         <View pointerEvents="none" style={[styles.attributionWrap, { bottom: 3 + bottomInset }]}>

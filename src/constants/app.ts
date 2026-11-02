@@ -10,6 +10,8 @@ export const StorageKeys = {
   fareTier: 'tripede.fare.tier',
   fareDiscount: 'tripede.fare.discount',
   savedTrips: 'tripede.trips.saved',
+  themePreference: 'tripede.theme.preference',
+  mapStyle: 'tripede.map.style',
 } as const;
 
 export type Vehicle = {

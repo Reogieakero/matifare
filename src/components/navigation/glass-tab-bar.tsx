@@ -9,7 +9,7 @@ import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { AppText } from '@/components/ui/app-text';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Brand, Gradients, Shadows, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useColorMode, useTheme } from '@/hooks/use-theme';
 
 const tabConfig: Record<string, { label: string; icon: IconName }> = {
   home: { label: 'Home', icon: 'home' },
@@ -25,20 +25,29 @@ const hasLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 type GlassBackdropProps = {
   radius: number;
+  colorMode: 'light' | 'dark';
 };
 
-/** Frosted white glass: native Liquid Glass on iOS 26+, blur fallback elsewhere. */
-function GlassBackdrop({ radius }: GlassBackdropProps) {
+/** Frosted glass: native Liquid Glass on iOS 26+, blur fallback elsewhere. */
+function GlassBackdrop({ radius, colorMode }: GlassBackdropProps) {
+  const isDark = colorMode === 'dark';
+
   if (hasLiquidGlass) {
     return (
       <>
         <GlassView
           glassEffectStyle="regular"
-          tintColor="rgba(255,255,255,0.45)"
-          colorScheme="light"
+          tintColor={isDark ? 'rgba(16,26,46,0.55)' : 'rgba(255,255,255,0.45)'}
+          colorScheme={colorMode}
           style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
         />
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glassVeil]} />
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            isDark ? styles.glassVeilDark : styles.glassVeil,
+          ]}
+        />
       </>
     );
   }
@@ -47,11 +56,17 @@ function GlassBackdrop({ radius }: GlassBackdropProps) {
     <>
       <BlurView
         intensity={Platform.OS === 'android' ? 80 : 60}
-        tint="light"
+        tint={colorMode}
         experimentalBlurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.fallbackVeil]} />
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          isDark ? styles.fallbackVeilDark : styles.fallbackVeil,
+        ]}
+      />
     </>
   );
 }
@@ -59,6 +74,7 @@ function GlassBackdrop({ radius }: GlassBackdropProps) {
 export function GlassTabBar({ state, descriptors, navigateToTab, insets }: BottomTabBarProps) {
   const router = useRouter();
   const theme = useTheme();
+  const colorMode = useColorMode();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -80,10 +96,7 @@ export function GlassTabBar({ state, descriptors, navigateToTab, insets }: Botto
   const activeKey = state.routes[state.index]?.key;
 
   const addTrip = () => {
-    router.navigate({
-      pathname: '/home',
-      params: { focus: 'estimator', t: Date.now().toString() },
-    });
+    router.push('/map');
   };
 
   return (
@@ -97,7 +110,7 @@ export function GlassTabBar({ state, descriptors, navigateToTab, insets }: Botto
       ]}>
       <View style={styles.barShadow}>
         <View style={styles.bar}>
-          <GlassBackdrop radius={33} />
+          <GlassBackdrop radius={33} colorMode={colorMode} />
 
           <View style={styles.tabs}>
             {state.routes.map((route) => {
@@ -136,7 +149,7 @@ export function GlassTabBar({ state, descriptors, navigateToTab, insets }: Botto
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add trip"
-          accessibilityHint="Opens a new fare estimate"
+          accessibilityHint="Opens the commute meter to start a new trip"
           onPress={addTrip}
           style={({ pressed }) => [
             styles.addButton,
@@ -185,8 +198,14 @@ const styles = StyleSheet.create({
   glassVeil: {
     backgroundColor: 'rgba(226,232,240,0.52)',
   },
+  glassVeilDark: {
+    backgroundColor: 'rgba(8,14,28,0.55)',
+  },
   fallbackVeil: {
     backgroundColor: 'rgba(226,232,240,0.6)',
+  },
+  fallbackVeilDark: {
+    backgroundColor: 'rgba(8,14,28,0.62)',
   },
   tabs: {
     flex: 1,

@@ -2,9 +2,11 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
 
+import { OfflineMapCanvas } from '@/components/map/offline-map-canvas';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
 import { Brand, Gradients, Radii, Shadows } from '@/constants/theme';
+import { OfflineMap, type TrackPoint } from '@/lib/offline-map';
 
 const palette = {
   stage: '#F3F8FF',
@@ -17,6 +19,24 @@ const palette = {
   blueSoft: 'rgba(37,99,235,0.10)',
   yellow: Brand.yellow,
   yellowInk: Brand.yellowInk,
+};
+
+const previewCenter = OfflineMap.center;
+
+/** Static route and pin so the onboarding map looks like a live commute. */
+const previewTrack: TrackPoint[] = [
+  { latitude: previewCenter.lat - 0.004, longitude: previewCenter.lng - 0.004 },
+  { latitude: previewCenter.lat - 0.0026, longitude: previewCenter.lng - 0.0021 },
+  { latitude: previewCenter.lat - 0.001, longitude: previewCenter.lng - 0.0006 },
+  { latitude: previewCenter.lat + 0.0004, longitude: previewCenter.lng + 0.001 },
+  { latitude: previewCenter.lat + 0.002, longitude: previewCenter.lng + 0.0025 },
+];
+
+const previewLocation = {
+  ...previewTrack[previewTrack.length - 1],
+  accuracy: 9,
+  speed: 4,
+  timestamp: 0,
 };
 
 type StageProps = {
@@ -39,7 +59,7 @@ function Stage({ height, children }: StageProps) {
   );
 }
 
-function MascotPreview() {
+function FarePreview() {
   return (
     <>
       <View style={styles.mascotHalo} />
@@ -55,13 +75,13 @@ function MascotPreview() {
         <View style={styles.floatingIcon}>
           <Icon name="check" size={12} color={palette.blue} weight="bold" />
         </View>
-        <AppText style={styles.floatingText}>Fare locked</AppText>
+        <AppText style={styles.floatingText}>Estimate ready</AppText>
       </View>
 
       <View style={styles.mascotFareCard}>
         <View style={{ gap: 1 }}>
-          <AppText style={styles.mascotFareLabel}>ESTIMATED FARE</AppText>
-          <AppText style={styles.mascotFareValue}>$12.40</AppText>
+          <AppText style={styles.mascotFareLabel}>TRICYCLE FARE</AppText>
+          <AppText style={styles.mascotFareValue}>₱25.00</AppText>
         </View>
         <View style={styles.walletBadge}>
           <Icon name="wallet" size={18} color={palette.blue} />
@@ -71,82 +91,91 @@ function MascotPreview() {
   );
 }
 
-const options = [
-  { label: 'Car', sub: '3 min away', price: '$8.40', icon: 'car' as const },
-  { label: 'Bike', sub: '1 min away', price: '$4.20', icon: 'bike' as const },
-  { label: 'XL', sub: '5 min away', price: '$12.60', icon: 'van' as const },
-];
-
-function ComparePreview() {
+function MapPreview() {
   return (
-    <>
-      <View style={styles.bestValue}>
-        <Icon name="sparkles" size={12} color={Brand.yellowDeep} />
-        <AppText style={styles.bestValueText}>Best value</AppText>
-      </View>
+    <View style={styles.mapLayout}>
+      <View style={styles.mapFrame}>
+        <OfflineMapCanvas
+          height={170}
+          location={previewLocation}
+          track={previewTrack}
+          status="ready"
+          canAskAgain={false}
+          error={null}
+          onRetry={() => {}}
+          onOpenSettings={() => {}}
+          initialSpanMeters={3200}
+          showChip={false}
+          showAttribution={false}
+          showLocate={false}
+          interactive={false}
+          rounded={false}
+        />
 
-      <View style={styles.optionStack}>
-        {options.map((option, index) => {
-          const selected = index === 0;
-          return (
-            <View
-              key={option.label}
-              style={[
-                styles.optionCard,
-                selected && styles.optionCardSelected,
-                index > 0 && { opacity: index === 1 ? 0.92 : 0.76, transform: [{ scale: 1 - index * 0.025 }] },
-              ]}>
-              <View style={[styles.optionIcon, selected && styles.optionIconSelected]}>
-                <Icon name={option.icon} size={20} color={selected ? '#FFFFFF' : palette.secondary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText style={styles.optionLabel}>{option.label}</AppText>
-                <AppText style={styles.optionSub}>{option.sub}</AppText>
-              </View>
-              <AppText style={styles.optionPrice}>{option.price}</AppText>
-              <View style={[styles.check, selected && styles.checkSelected]}>
-                {selected ? <Icon name="check" size={11} color="#FFFFFF" weight="bold" /> : null}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    </>
-  );
-}
-
-const confidenceItems = [
-  { icon: 'wifi-off' as const, label: 'Offline\nready' },
-  { icon: 'wallet' as const, label: 'No hidden\ncharges' },
-  { icon: 'clock' as const, label: 'Trips\nsaved' },
-];
-
-function ConfidencePreview() {
-  return (
-    <>
-      <View style={styles.shieldOuter}>
-        <View style={styles.shieldMid}>
-          <View style={styles.shieldCore}>
-            <Icon name="shield" size={54} color="#FFFFFF" />
+        <View pointerEvents="none" style={styles.mapBadgeRow}>
+          <View style={styles.mapBadge}>
+            <Icon name="locate" size={9} color={palette.blue} />
+            <AppText style={styles.mapBadgeText}>LIVE GPS</AppText>
+          </View>
+          <View style={[styles.mapBadge, styles.mapBadgeOffline]}>
+            <Icon name="wifi-off" size={9} color={palette.yellowInk} />
+            <AppText style={[styles.mapBadgeText, { color: palette.yellowInk }]}>
+              OFFLINE
+            </AppText>
           </View>
         </View>
       </View>
 
-      <View style={styles.confidenceGrid}>
-        {confidenceItems.map((item) => (
-          <View key={item.label} style={styles.confidenceTile}>
-            <View style={styles.confidenceIcon}>
-              <Icon name={item.icon} size={17} color={palette.blue} />
-            </View>
-            <AppText style={styles.confidenceLabel}>{item.label}</AppText>
-          </View>
-        ))}
+      <View style={styles.meterCard}>
+        <View style={styles.meterIcon}>
+          <Icon name="route" size={16} color={palette.blue} />
+        </View>
+        <View style={styles.meterCopy}>
+          <AppText style={styles.meterLabel}>COMMUTE METER</AppText>
+          <AppText style={styles.meterValue}>2.4 km · ₱27.00</AppText>
+        </View>
+        <View style={styles.meterPill}>
+          <View style={styles.meterDot} />
+          <AppText style={styles.meterPillText}>RECORDING</AppText>
+        </View>
       </View>
-    </>
+    </View>
   );
 }
 
-export type SlideArtVariant = 'mascot' | 'compare' | 'confidence';
+const featureItems = [
+  { icon: 'wifi-off' as const, title: 'Offline map', note: 'No signal needed' },
+  { icon: 'wallet' as const, title: 'Fare matrix', note: 'Fuel-tier pricing' },
+  { icon: 'trips' as const, title: 'Saved trips', note: 'History on device' },
+  { icon: 'analytics' as const, title: 'Insights', note: 'Spend and savings' },
+];
+
+function FeaturesPreview() {
+  return (
+    <View style={styles.featureLayout}>
+      <View style={styles.featureBadge}>
+        <Icon name="lock" size={10} color={palette.blue} />
+        <AppText style={styles.featureBadgeText}>STORED ON THIS PHONE</AppText>
+      </View>
+
+      <View style={styles.featureGrid}>
+        {featureItems.map((item) => (
+          <View key={item.title} style={styles.featureTile}>
+            <View style={styles.featureIcon}>
+              <Icon name={item.icon} size={18} color={palette.blue} />
+            </View>
+            <View style={styles.featureCopy}>
+              <AppText style={styles.featureTitle}>{item.title}</AppText>
+              <AppText style={styles.featureNote}>{item.note}</AppText>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export type SlideArtVariant = 'fare' | 'map' | 'features';
 
 type SlideArtProps = {
   variant: SlideArtVariant;
@@ -156,9 +185,9 @@ type SlideArtProps = {
 export function SlideArt({ variant, height }: SlideArtProps) {
   return (
     <Stage height={height}>
-      {variant === 'mascot' ? <MascotPreview /> : null}
-      {variant === 'compare' ? <ComparePreview /> : null}
-      {variant === 'confidence' ? <ConfidencePreview /> : null}
+      {variant === 'fare' ? <FarePreview /> : null}
+      {variant === 'map' ? <MapPreview /> : null}
+      {variant === 'features' ? <FeaturesPreview /> : null}
     </Stage>
   );
 }
@@ -284,148 +313,164 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bestValue: {
-    position: 'absolute',
-    top: 24,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radii.pill,
-    backgroundColor: 'rgba(255,198,26,0.20)',
+  mapLayout: {
+    width: '100%',
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  mapFrame: {
+    borderRadius: Radii.lg,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(229,169,0,0.40)',
-    transform: [{ rotate: '4deg' }],
-    zIndex: 2,
+    borderColor: 'rgba(15,23,42,0.10)',
+    ...(Shadows.card ?? {}),
   },
-  bestValueText: {
-    color: palette.yellowInk,
-    fontSize: 10.5,
-    fontWeight: '700',
+  mapBadgeRow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  optionStack: {
-    width: 284,
-    gap: 8,
-    paddingTop: 22,
-  },
-  optionCard: {
+  mapBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: Radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
+  mapBadgeOffline: {
+    backgroundColor: 'rgba(255,198,26,0.92)',
+  },
+  mapBadgeText: {
+    color: palette.blue,
+    fontSize: 7.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+  },
+  meterCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 11,
-    borderRadius: 18,
+    paddingVertical: 10,
+    borderRadius: Radii.lg,
     backgroundColor: palette.card,
     borderWidth: 1,
     borderColor: palette.line,
     ...(Shadows.card ?? {}),
   },
-  optionCardSelected: {
-    backgroundColor: '#F2F7FF',
-    borderColor: 'rgba(37,99,235,0.45)',
-  },
-  optionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#EEF3FC',
+  meterIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: palette.blueSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionIconSelected: {
-    backgroundColor: palette.blue,
+  meterCopy: {
+    flex: 1,
+    gap: 1,
   },
-  optionLabel: {
-    color: palette.text,
-    fontSize: 14,
-    lineHeight: 17,
-    fontWeight: '700',
-  },
-  optionSub: {
+  meterLabel: {
     color: palette.muted,
-    fontSize: 10.5,
-    lineHeight: 13,
-    fontWeight: '500',
-  },
-  optionPrice: {
-    color: palette.text,
-    fontSize: 14,
+    fontSize: 7.5,
     fontWeight: '700',
+    letterSpacing: 1,
   },
-  check: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.20)',
+  meterValue: {
+    color: palette.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    fontVariant: ['tabular-nums'],
+  },
+  meterPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: Radii.pill,
+    backgroundColor: 'rgba(37,99,235,0.10)',
   },
-  checkSelected: {
+  meterDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: palette.blue,
-    borderColor: palette.blue,
   },
-  shieldOuter: {
-    width: 188,
-    height: 188,
-    borderRadius: 94,
-    borderWidth: 1,
-    borderColor: 'rgba(37,99,235,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -28,
+  meterPillText: {
+    color: palette.blue,
+    fontSize: 7,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
-  shieldMid: {
-    width: 148,
-    height: 148,
-    borderRadius: 74,
-    borderWidth: 1,
-    borderColor: 'rgba(37,99,235,0.28)',
+  featureLayout: {
+    width: '100%',
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  featureBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radii.pill,
     backgroundColor: palette.blueSoft,
   },
-  shieldCore: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundImage: Gradients.brand,
-    ...(Shadows.glow ?? {}),
+  featureBadgeText: {
+    color: palette.blue,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.9,
   },
-  confidenceGrid: {
+  featureGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 18,
   },
-  confidenceTile: {
-    width: 86,
-    borderRadius: Radii.md,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    backgroundColor: '#FFFFFF',
+  featureTile: {
+    width: '48.5%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 11,
+    borderRadius: Radii.lg,
+    backgroundColor: palette.card,
     borderWidth: 1,
     borderColor: palette.line,
-    alignItems: 'center',
-    gap: 7,
     ...(Shadows.card ?? {}),
   },
-  confidenceIcon: {
-    width: 30,
-    height: 30,
+  featureIcon: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
     backgroundColor: palette.blueSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confidenceLabel: {
-    color: palette.secondary,
-    fontSize: 10.5,
+  featureCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  featureTitle: {
+    color: palette.text,
+    fontSize: 11.5,
     lineHeight: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
+  },
+  featureNote: {
+    color: palette.muted,
+    fontSize: 8.5,
+    lineHeight: 11,
+    fontWeight: '500',
   },
 });

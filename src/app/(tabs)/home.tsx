@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,14 +9,13 @@ import { BrandLogo } from '@/components/brand-logo';
 import { FareMatrixModal } from '@/components/fare-matrix-modal';
 import { TabBarClearance } from '@/components/navigation/glass-tab-bar';
 import { OfflineMapCard } from '@/components/offline-map-card';
+import { RouteSnapshots } from '@/components/snapshots/route-snapshots';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
-import { StorageKeys } from '@/constants/app';
-import { FareMatrix, type FareTier } from '@/constants/fare-matrix';
 import { Gradients, MaxContentWidth, Radii, Shadows, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { getStoredValue, setStoredValue } from '@/lib/storage';
+import { useColorMode, useTheme } from '@/hooks/use-theme';
+import { useTripPreferences } from '@/hooks/use-trip-session';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -28,34 +27,10 @@ function getGreeting() {
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const colorMode = useColorMode();
   const insets = useSafeAreaInsets();
+  const { tier: selectedTier, selectedTierId, selectTier } = useTripPreferences();
   const [matrixOpen, setMatrixOpen] = useState(false);
-  const [selectedTierId, setSelectedTierId] = useState(FareMatrix[0].id);
-
-  useEffect(() => {
-    let active = true;
-
-    getStoredValue(StorageKeys.fareTier).then((value) => {
-      if (!active || !value) return;
-
-      const tierId = Number(value);
-      if (FareMatrix.some((tier) => tier.id === tierId)) {
-        setSelectedTierId(tierId);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const selectTier = (tier: FareTier) => {
-    setSelectedTierId(tier.id);
-    void setStoredValue(StorageKeys.fareTier, String(tier.id));
-  };
-
-  const selectedTier =
-    FareMatrix.find((tier) => tier.id === selectedTierId) ?? FareMatrix[0];
 
   const startCommute = () => {
     router.push('/map');
@@ -63,7 +38,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={colorMode === 'dark' ? 'light' : 'dark'} />
       <AmbientBackground color={theme.background} />
 
       <ScrollView
@@ -225,6 +200,8 @@ export default function HomeScreen() {
         </View>
 
         <OfflineMapCard />
+
+        <RouteSnapshots />
       </ScrollView>
 
       <FareMatrixModal

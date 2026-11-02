@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,15 +11,10 @@ import { TricyclePlateModal } from '@/components/map/tricycle-plate-modal';
 import { TripSaveModal } from '@/components/map/trip-save-modal';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
-import { StorageKeys } from '@/constants/app';
-import { FareMatrix, type FareTier } from '@/constants/fare-matrix';
 import { Radii, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useTripOdometer } from '@/hooks/use-trip-odometer';
-import { useUserLocation } from '@/hooks/use-user-location';
-import { applyFareDiscount, calculateFare, formatKm, formatPeso } from '@/lib/fare';
-import { getStoredValue, setStoredValue } from '@/lib/storage';
-import { appendSavedTrip } from '@/lib/trips';
+import { useTripSession } from '@/hooks/use-trip-session';
+import { formatKm, formatPeso } from '@/lib/fare';
 
 const PANEL_OVERLAP = Radii.lg;
 
@@ -27,7 +22,34 @@ export default function MapScreen() {
   const theme = useTheme();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [focused, setFocused] = useState(false);
+  const {
+    location,
+    locationStatus,
+    canAskAgain,
+    locationError,
+    refreshLocation,
+    openLocationSettings,
+    acquireLocation,
+    status: tripStatus,
+    km,
+    durationMs,
+    poorSignal,
+    track,
+    plateNumber,
+    tier: selectedTier,
+    selectedTierId,
+    selectTier,
+    discountApplied,
+    toggleDiscount,
+    fare,
+    endedAt,
+    startTrip,
+    endTrip,
+    resetTrip,
+    saveTrip,
+    discardTrip,
+  } = useTripSession();
+
   // The offline map builds a lot of SVG on mount. Hold it back until the
   // screen transition has finished so the slide never stutters.
   const [mapReady, setMapReady] = useState(false);
@@ -35,132 +57,49 @@ export default function MapScreen() {
   const [matrixOpen, setMatrixOpen] = useState(false);
   const [plateModalOpen, setPlateModalOpen] = useState(false);
   const [plateDraft, setPlateDraft] = useState('');
-  const [plateNumber, setPlateNumber] = useState<string | null>(null);
-  const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [endedAt, setEndedAt] = useState<number | null>(null);
-  const [navigating, setNavigating] = useState(false);
-  const [selectedTierId, setSelectedTierId] = useState(FareMatrix[0].id);
-  const [discountApplied, setDiscountApplied] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   // The panel sizes itself to its content; the map fills everything left over.
   const [mapHeight, setMapHeight] = useState(() => Math.round(height * 0.5));
+  const saveModalOpen = endedAt !== null;
 
   useFocusEffect(
     useCallback(() => {
       // Let the slide-up finish before GPS starts, so a permission prompt never
       // interrupts the transition.
-      const gpsTimer = setTimeout(() => setFocused(true), 260);
+      let release: (() => void) | null = null;
+      const gpsTimer = setTimeout(() => {
+        release = acquireLocation();
+      }, 260);
       const mapTimer = setTimeout(() => setMapReady(true), 400);
 
       return () => {
         clearTimeout(gpsTimer);
         clearTimeout(mapTimer);
-        setFocused(false);
+        release?.();
       };
-    }, []),
+    }, [acquireLocation]),
   );
 
-  const { status, location, canAskAgain, error, refresh, openSettings } = useUserLocation(
-    focused,
-    { profile: navigating ? 'navigation' : 'default' },
-  );
-
-  const trip = useTripOdometer(location);
   const hasFix = Boolean(location);
-
-  useEffect(() => {
-    let active = true;
-
-    getStoredValue(StorageKeys.fareTier).then((value) => {
-      if (!active || !value) return;
-
-      const tierId = Number(value);
-      if (FareMatrix.some((tier) => tier.id === tierId)) {
-        setSelectedTierId(tierId);
-      }
-    });
-
-    getStoredValue(StorageKeys.fareDiscount).then((value) => {
-      if (!active || !value) return;
-      setDiscountApplied(value === '1');
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const selectTier = (tier: FareTier) => {
-    setSelectedTierId(tier.id);
-    void setStoredValue(StorageKeys.fareTier, String(tier.id));
-  };
-
-  const toggleDiscount = () => {
-    setDiscountApplied((current) => {
-      const next = !current;
-      void setStoredValue(StorageKeys.fareDiscount, next ? '1' : '0');
-      return next;
-    });
-  };
 
   const togglePanel = () => {
     setPanelCollapsed((current) => !current);
   };
 
-  const selectedTier =
-    FareMatrix.find((tier) => tier.id === selectedTierId) ?? FareMatrix[0];
-
   // "Commute now" only asks for the optional tricycle number; the meter starts
   // once the rider confirms (or skips) that prompt.
   const requestStart = () => {
     setPlateDraft('');
-    setEndedAt(null);
     setPlateModalOpen(true);
   };
 
   const confirmStart = (enteredPlate: string | null) => {
-    setPlateNumber(enteredPlate);
     setPlateModalOpen(false);
-    trip.start();
-    setNavigating(true);
-  };
-
-  const endTrip = () => {
-    trip.stop();
-    setNavigating(false);
-    setEndedAt(Date.now());
-    setSaveModalOpen(true);
-  };
-
-  const saveTripDetails = async () => {
-    if (endedAt === null) return;
-
-    const fare = calculateFare(selectedTier, trip.km).total;
-
-    // Keep the modal open: it plays the success animation once this resolves,
-    // then closes itself.
-    await appendSavedTrip({
-      startedAt: Math.max(endedAt - trip.durationMs, 0),
-      endedAt,
-      distanceKm: trip.km,
-      durationMs: trip.durationMs,
-      fare: discountApplied ? applyFareDiscount(fare) : fare,
-      tier: selectedTier.tier,
-      plateNumber,
-      discountApplied,
-      track: trip.track,
-    });
+    startTrip(enteredPlate);
   };
 
   const closeSaveModal = () => {
-    setSaveModalOpen(false);
-  };
-
-  const resetTrip = () => {
-    trip.reset();
-    setPlateNumber(null);
-    setEndedAt(null);
-    setNavigating(false);
+    discardTrip();
   };
 
   const handleMapLayout = (event: LayoutChangeEvent) => {
@@ -171,9 +110,7 @@ export default function MapScreen() {
   // Keep the locate pill and zoom buttons clear of the panel's rounded edge.
   const mapControlsInset = fullScreen ? insets.bottom : PANEL_OVERLAP + Spacing.sm;
 
-  const tripFare = calculateFare(selectedTier, trip.km).total;
-  const finalFare = discountApplied ? applyFareDiscount(tripFare) : tripFare;
-  const tripSummary = `${formatPeso(finalFare)} · ${formatKm(trip.km)}`;
+  const tripSummary = `${formatPeso(fare)} · ${formatKm(km)}`;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -183,12 +120,12 @@ export default function MapScreen() {
             <OfflineMapCanvas
               height={mapHeight}
               location={location}
-              track={trip.track}
-              status={status}
+              track={track}
+              status={locationStatus}
               canAskAgain={canAskAgain}
-              error={error}
-              onRetry={refresh}
-              onOpenSettings={openSettings}
+              error={locationError}
+              onRetry={refreshLocation}
+              onOpenSettings={openLocationSettings}
               initialSpanMeters={1400}
               maxSpanMeters={10000}
               bottomInset={mapControlsInset}
@@ -208,7 +145,12 @@ export default function MapScreen() {
           <View style={[styles.topBar, { backgroundColor: 'rgba(255,255,255,0.95)' }]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close map and commute meter"
+              accessibilityLabel="Close map"
+              accessibilityHint={
+                tripStatus === 'riding'
+                  ? 'The commute meter keeps running and stays visible on every screen'
+                  : 'Returns to the previous screen'
+              }
               onPress={() => router.back()}
               style={({ pressed }) => [
                 styles.backButton,
@@ -263,12 +205,12 @@ export default function MapScreen() {
         <CommutePanel
           tier={selectedTier}
           onChangeTier={() => setMatrixOpen(true)}
-          tripStatus={trip.status}
-          km={trip.km}
-          durationMs={trip.durationMs}
-          poorSignal={trip.poorSignal}
+          tripStatus={tripStatus}
+          km={km}
+          durationMs={durationMs}
+          poorSignal={poorSignal}
           hasFix={hasFix}
-          locationStatus={status}
+          locationStatus={locationStatus}
           plateNumber={plateNumber}
           discountApplied={discountApplied}
           onToggleDiscount={toggleDiscount}
@@ -299,7 +241,7 @@ export default function MapScreen() {
       <TripSaveModal
         visible={saveModalOpen}
         summary={tripSummary}
-        onSave={saveTripDetails}
+        onSave={saveTrip}
         onDiscard={closeSaveModal}
         onClose={closeSaveModal}
       />

@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { AppText } from '@/components/ui/app-text';
 import { AppConfig } from '@/constants/app';
-import { Brand, Radii, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useColorMode, useTheme } from '@/hooks/use-theme';
 import { hasCompletedOnboarding } from '@/lib/onboarding';
 
 const MIN_SPLASH_TIME = 1900;
@@ -29,6 +30,8 @@ type Destination = '/onboarding' | '/home';
 
 export default function LaunchScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const colorMode = useColorMode();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -133,9 +136,9 @@ export default function LaunchScreen() {
   }));
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
-      <AmbientBackground color={Brand.white} />
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar style={colorMode === 'dark' ? 'light' : 'dark'} />
+      <AmbientBackground color={theme.background} />
       <Animated.View
         style={[
           styles.content,
@@ -145,8 +148,8 @@ export default function LaunchScreen() {
         <View style={styles.hero}>
           <Animated.View style={[styles.wordmarkWrap, wordmarkStyle]}>
             <AppText style={styles.wordmark}>
-              <Text style={{ color: Brand.ink }}>Trip</Text>
-              <Text style={{ color: Brand.blue }}>ede</Text>
+              <Text style={{ color: theme.text }}>Trip</Text>
+              <Text style={{ color: theme.primary }}>ede</Text>
             </AppText>
           </Animated.View>
 
@@ -156,7 +159,7 @@ export default function LaunchScreen() {
               { width: mascotWidth, height: mascotWidth / 1.5 },
               mascotStyle,
             ]}>
-            <View style={styles.halo} />
+            <View style={[styles.halo, { backgroundColor: theme.primarySoft }]} />
             <Image
               source={require('@/assets/images/mascot.png')}
               style={styles.mascot}
@@ -167,15 +170,24 @@ export default function LaunchScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.taglineWrap, taglineStyle, styles.aboveGlow]}>
-            <AppText variant="body" align="center" style={styles.tagline}>
+            <AppText
+              variant="body"
+              align="center"
+              style={[styles.tagline, { color: theme.textSecondary }]}>
               {AppConfig.tagline}
             </AppText>
           </Animated.View>
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.loaderTrack}>
-            <Animated.View style={[styles.loaderBar, loaderStyle]} />
+          <View style={[styles.loaderTrack, { backgroundColor: theme.primarySoft }]}>
+            <Animated.View
+              style={[
+                styles.loaderBar,
+                { backgroundColor: theme.primary, shadowColor: theme.primary },
+                loaderStyle,
+              ]}
+            />
           </View>
           <AppText variant="caption" tone="muted" style={styles.loaderLabel}>
             PREPARING YOUR FARES
@@ -193,7 +205,6 @@ export default function LaunchScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Brand.white,
     overflow: 'hidden',
   },
   content: {
@@ -231,7 +242,6 @@ const styles = StyleSheet.create({
     width: '112%',
     aspectRatio: 1,
     borderRadius: 999,
-    backgroundColor: 'rgba(37,99,235,0.07)',
     transform: [{ rotate: '-14deg' }],
   },
   mascot: {
@@ -242,7 +252,6 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   tagline: {
-    color: '#475569',
     fontSize: 15,
     lineHeight: 22,
   },
@@ -254,14 +263,11 @@ const styles = StyleSheet.create({
     width: 138,
     height: 3,
     borderRadius: Radii.pill,
-    backgroundColor: 'rgba(37,99,235,0.14)',
     overflow: 'hidden',
   },
   loaderBar: {
     height: 3,
     borderRadius: Radii.pill,
-    backgroundColor: Brand.blue,
-    shadowColor: Brand.blue,
     shadowOpacity: 0.6,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
@@ -269,7 +275,6 @@ const styles = StyleSheet.create({
   loaderLabel: {
     fontSize: 9.5,
     letterSpacing: 2,
-    color: 'rgba(122,136,158,0.9)',
   },
   version: {
     position: 'absolute',
@@ -279,6 +284,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 9,
     letterSpacing: 1.4,
-    color: 'rgba(122,136,158,0.7)',
   },
 });

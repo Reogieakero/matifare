@@ -66,7 +66,7 @@ export function TricyclePlateModal({
             {
               backgroundColor: theme.surface,
               borderColor: theme.border,
-              marginBottom: insets.bottom,
+              marginBottom: Math.max(insets.bottom, Spacing.lg),
               ...(Shadows.card ?? {}),
             },
           ]}>

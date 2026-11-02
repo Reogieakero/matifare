@@ -14,26 +14,37 @@ import { AmbientBackground } from '@/components/ui/ambient-background';
 import { AppButton } from '@/components/ui/app-button';
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MaxContentWidth, Radii, Shadows, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useColorMode, useTheme } from '@/hooks/use-theme';
 import { formatDateKey, formatTripDate, toDateKey } from '@/lib/dates';
 import { formatDuration, formatKm, formatPeso } from '@/lib/fare';
 import { loadSavedTrips, type SavedTrip } from '@/lib/trips';
 
-function TripStat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+/** Dashed tear line with a half-moon notch on each edge of the paper. */
+function Perforation() {
   const theme = useTheme();
 
   return (
-    <View style={styles.statCell}>
-      <AppText variant="caption" tone="muted" style={styles.statLabel}>
-        {label}
-      </AppText>
-      <AppText
-        variant="label"
-        numberOfLines={1}
-        style={[styles.statValue, { color: muted ? theme.textMuted : theme.text }]}>
-        {value}
-      </AppText>
+    <View style={styles.perforation}>
+      <View style={[styles.notch, styles.notchLeft, { backgroundColor: theme.background }]} />
+      <View style={[styles.receiptDashes, { borderTopColor: theme.borderStrong }]} />
+      <View style={[styles.notch, styles.notchRight, { backgroundColor: theme.background }]} />
+    </View>
+  );
+}
+
+/** Softly scalloped paper edge along the bottom of the receipt. */
+function ScallopedEdge() {
+  const theme = useTheme();
+
+  return (
+    <View pointerEvents="none" style={styles.scallop}>
+      {Array.from({ length: 22 }, (_, index) => (
+        <View key={index} style={styles.scallopCell}>
+          <View style={[styles.scallopDot, { backgroundColor: theme.background }]} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -48,7 +59,7 @@ function TripCard({ trip, onPress }: { trip: SavedTrip; onPress: () => void }) {
       accessibilityHint="Opens the route and commute details"
       onPress={onPress}
       style={({ pressed }) => [
-        styles.tripCard,
+        styles.receipt,
         {
           backgroundColor: theme.surface,
           borderColor: theme.border,
@@ -56,57 +67,142 @@ function TripCard({ trip, onPress }: { trip: SavedTrip; onPress: () => void }) {
         },
         pressed && styles.tripCardPressed,
       ]}>
-      <Image
-        source={require('@/assets/images/mascot.png')}
-        style={styles.tripMascot}
-        contentFit="contain"
-        accessibilityIgnoresInvertColors
-      />
-
-      <View style={[styles.tripAccent, { backgroundColor: theme.primary }]} />
-
-      <View style={styles.tripBody}>
-        <View style={styles.tripTop}>
-          <View style={[styles.tripIcon, { backgroundColor: theme.primarySoft }]}>
-            <Icon name="route" size={19} color={theme.primary} weight="semibold" />
+      <View style={styles.receiptBody}>
+        <View style={styles.receiptHeader}>
+          <View style={styles.receiptBrand}>
+            <AppText style={styles.receiptBrandName}>TRIPEDE</AppText>
+            <AppText variant="caption" tone="muted" style={styles.receiptKicker}>
+              FARE RECEIPT
+            </AppText>
           </View>
-
-          <View style={styles.tripHead}>
-            <AppText variant="label" numberOfLines={1}>
+          <View style={styles.receiptMeta}>
+            <AppText variant="mono" tone="secondary" style={styles.receiptDate}>
               {formatTripDate(trip.endedAt)}
             </AppText>
-            <View style={styles.tripStatus}>
-              <View style={[styles.statusDot, { backgroundColor: theme.primary }]} />
-              <AppText variant="caption" tone="muted" numberOfLines={1} style={styles.tripStatusText}>
-                SAVED · {trip.tier.toUpperCase()}
-                {trip.discountApplied ? ' · 20% OFF' : ''}
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.tripFare}>
-            <AppText style={styles.tripFareValue}>{formatPeso(trip.fare)}</AppText>
-            <AppText variant="caption" tone="muted" style={styles.tripFareLabel}>
-              TOTAL FARE
+            <AppText variant="mono" tone="muted" style={styles.receiptNumber}>
+              NO. {trip.id.slice(-6).toUpperCase()}
             </AppText>
           </View>
         </View>
+      </View>
 
-        <View style={[styles.statStrip, { backgroundColor: theme.backgroundElement }]}>
-          <TripStat label="DISTANCE" value={formatKm(trip.distanceKm)} />
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <TripStat label="DURATION" value={formatDuration(trip.durationMs)} />
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <TripStat label="PLATE" value={trip.plateNumber ?? '—'} muted={!trip.plateNumber} />
+      <Perforation />
+
+      <View style={styles.receiptBody}>
+        <View style={styles.receiptStats}>
+          <View style={styles.receiptStat}>
+            <AppText variant="caption" tone="muted" style={styles.receiptStatLabel}>
+              DISTANCE
+            </AppText>
+            <AppText variant="mono" numberOfLines={1} style={styles.receiptStatValue}>
+              {formatKm(trip.distanceKm)}
+            </AppText>
+          </View>
+
+          <View style={[styles.receiptStatDivider, { backgroundColor: theme.border }]} />
+
+          <View style={styles.receiptStat}>
+            <AppText variant="caption" tone="muted" style={styles.receiptStatLabel}>
+              DURATION
+            </AppText>
+            <AppText variant="mono" numberOfLines={1} style={styles.receiptStatValue}>
+              {formatDuration(trip.durationMs)}
+            </AppText>
+          </View>
+
+          <View style={[styles.receiptStatDivider, { backgroundColor: theme.border }]} />
+
+          <View style={[styles.receiptStat, styles.receiptStatEnd]}>
+            <AppText variant="caption" tone="muted" style={styles.receiptStatLabel}>
+              TOTAL FARE
+            </AppText>
+            <AppText numberOfLines={1} style={styles.receiptTotalValue}>
+              {formatPeso(trip.fare)}
+            </AppText>
+          </View>
         </View>
       </View>
+
+      <View pointerEvents="none" style={styles.receiptMascotWrap}>
+        <Image
+          source={require('@/assets/images/mascot.png')}
+          style={styles.receiptMascot}
+          contentFit="contain"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+
+      <ScallopedEdge />
     </Pressable>
+  );
+}
+
+function TripCardSkeleton() {
+  const theme = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.receipt,
+        {
+          backgroundColor: theme.surface,
+          borderColor: theme.border,
+          ...(Shadows.card ?? {}),
+        },
+      ]}>
+      <View style={styles.receiptBody}>
+        <View style={styles.receiptHeader}>
+          <View style={styles.receiptBrand}>
+            <Skeleton style={styles.skeletonBrand} radius={4} />
+            <Skeleton style={styles.skeletonKicker} radius={4} />
+          </View>
+          <View style={styles.receiptMeta}>
+            <Skeleton style={styles.skeletonDate} radius={4} />
+            <Skeleton style={styles.skeletonNumber} radius={4} />
+          </View>
+        </View>
+      </View>
+
+      <Perforation />
+
+      <View style={styles.receiptBody}>
+        <View style={styles.receiptStats}>
+          <View style={styles.receiptStat}>
+            <Skeleton style={styles.skeletonStatLabel} radius={4} />
+            <Skeleton style={styles.skeletonStatValue} radius={4} />
+          </View>
+          <View style={[styles.receiptStatDivider, { backgroundColor: theme.border }]} />
+          <View style={styles.receiptStat}>
+            <Skeleton style={styles.skeletonStatLabel} radius={4} />
+            <Skeleton style={styles.skeletonStatValue} radius={4} />
+          </View>
+          <View style={[styles.receiptStatDivider, { backgroundColor: theme.border }]} />
+          <View style={[styles.receiptStat, styles.receiptStatEnd]}>
+            <Skeleton style={styles.skeletonStatLabel} radius={4} />
+            <Skeleton style={styles.skeletonTotalValue} radius={6} />
+          </View>
+        </View>
+      </View>
+
+      <ScallopedEdge />
+    </View>
+  );
+}
+
+function TripsSkeleton() {
+  return (
+    <View accessibilityLabel="Loading saved commutes" style={styles.tripList}>
+      <TripCardSkeleton />
+      <TripCardSkeleton />
+      <TripCardSkeleton />
+    </View>
   );
 }
 
 export default function TripsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const colorMode = useColorMode();
   const insets = useSafeAreaInsets();
   const [trips, setTrips] = useState<SavedTrip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +243,7 @@ export default function TripsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={colorMode === 'dark' ? 'light' : 'dark'} />
       <AmbientBackground color={theme.background} />
 
       <ScrollView
@@ -195,11 +291,7 @@ export default function TripsScreen() {
         </View>
 
         {loading ? (
-          <View style={[styles.loadingCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <AppText variant="body" tone="secondary">
-              Loading your saved commutes…
-            </AppText>
-          </View>
+          <TripsSkeleton />
         ) : visibleTrips.length === 0 ? (
           <View style={styles.emptyWrap}>
             <View
@@ -344,119 +436,167 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     maxWidth: 260,
   },
-  loadingCard: {
-    alignItems: 'center',
-    borderRadius: Radii.xxl,
-    borderWidth: 1,
-    padding: Spacing.xl,
-  },
   tripList: {
-    gap: Spacing.md,
+    gap: Spacing.lg,
     marginBottom: -Spacing.sm,
   },
-  tripCard: {
-    flexDirection: 'row',
-    borderRadius: Radii.xxl,
+  receipt: {
     borderWidth: 1,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
   },
   tripCardPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.99 }],
   },
-  tripMascot: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    width: 148,
-    opacity: 0.18,
+  receiptBody: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+    gap: 6,
   },
-  tripAccent: {
-    width: 4,
-    borderRadius: 2,
-    alignSelf: 'stretch',
-    marginVertical: Spacing.lg,
-    marginLeft: Spacing.lg,
-  },
-  tripBody: {
-    flex: 1,
-    padding: Spacing.lg,
-    paddingLeft: Spacing.md,
+  receiptHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: Spacing.md,
   },
-  tripTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  tripIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tripHead: {
-    flex: 1,
-    gap: 3,
-  },
-  tripStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  tripStatusText: {
-    fontSize: 9,
-    letterSpacing: 0.8,
-    flexShrink: 1,
-  },
-  tripFare: {
-    alignItems: 'flex-end',
+  receiptBrand: {
     gap: 1,
   },
-  tripFareValue: {
-    fontSize: 22,
-    lineHeight: 27,
+  receiptBrandName: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '800',
+    letterSpacing: 2.4,
+  },
+  receiptKicker: {
+    fontSize: 8.5,
+    letterSpacing: 1.6,
+  },
+  receiptMeta: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  receiptDate: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  receiptNumber: {
+    fontSize: 9,
+    lineHeight: 13,
+    letterSpacing: 0.8,
+  },
+  perforation: {
+    position: 'relative',
+    height: 12,
+    justifyContent: 'center',
+  },
+  receiptDashes: {
+    marginHorizontal: Spacing.lg,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+  },
+  notch: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  notchLeft: {
+    left: -8,
+  },
+  notchRight: {
+    right: -8,
+  },
+  receiptStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  receiptStat: {
+    flex: 1,
+    gap: 2,
+  },
+  receiptStatEnd: {
+    alignItems: 'flex-end',
+  },
+  receiptStatLabel: {
+    fontSize: 8.5,
+    letterSpacing: 1.1,
+  },
+  receiptStatValue: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  receiptStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    opacity: 0.8,
+  },
+  receiptTotalValue: {
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '800',
     letterSpacing: -0.6,
     fontVariant: ['tabular-nums'],
   },
-  tripFareLabel: {
-    fontSize: 9,
-    letterSpacing: 1,
+  receiptMascotWrap: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 124,
+    height: 82,
+    opacity: 0.14,
   },
-  statStrip: {
+  receiptMascot: {
+    width: '100%',
+    height: '100%',
+  },
+  scallop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 8,
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radii.lg,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
   },
-  statCell: {
+  scallopCell: {
     flex: 1,
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: Spacing.xs,
   },
-  statLabel: {
-    fontSize: 9,
-    letterSpacing: 1,
+  scallopDot: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 999,
   },
-  statValue: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-    textAlign: 'center',
+  skeletonBrand: {
+    width: 72,
+    height: 11,
   },
-  statDivider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
-    opacity: 0.8,
+  skeletonKicker: {
+    width: 58,
+    height: 8,
+  },
+  skeletonDate: {
+    width: 96,
+    height: 10,
+  },
+  skeletonNumber: {
+    width: 62,
+    height: 8,
+  },
+  skeletonStatLabel: {
+    width: 52,
+    height: 8,
+  },
+  skeletonStatValue: {
+    width: 64,
+    height: 12,
+  },
+  skeletonTotalValue: {
+    width: 82,
+    height: 20,
   },
 });
